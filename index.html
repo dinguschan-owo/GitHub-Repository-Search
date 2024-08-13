@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repository Search</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #202327;
+            color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #2d3339;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            width: 800px;
+            text-align: center;
+            position: relative;
+            border: 5.5px solid #4f5964;
+            max-height: 560px;
+            overflow-y: auto;
+        }
+
+        h1, h3 {
+            color: #f0f0f0;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            border: 4px solid #4f5963;
+            border-radius: 10px;
+            background-color: #394047;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 13px 21px;
+            border: none;
+            border-radius: 10px;
+            background-color: #3b8ea5;
+            color: #f0f0f0;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-left: 5px;
+        }
+
+        button:hover {
+            background-color: #41a3be;
+        }
+
+        .results {
+            margin-top: 20px;
+            text-align: left;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        ::placeholder {
+          color: #9fb2b7;
+        }
+      
+        .repo {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 4px solid #4f5963;
+            border-radius: 10px;
+            background-color: #333;
+        }
+
+        .repo a {
+            color: #21d498;
+            text-decoration: none;
+        }
+
+        .repo a:hover {
+            text-decoration: underline;
+        }
+
+        .file {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 4px solid #4f5963;
+            border-radius: 10px;
+            background-color: #2d3339;
+        }
+
+        .file-name {
+            flex: 1;
+            color: #f0f0f0;
+        }
+
+        .file-icons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .file-icons a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        .file-icons a.download {
+            font-size: 17px;
+            cursor: pointer;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>GitHub Repository Search</h1>
+        <h3>𝙼𝚊𝚍𝚎 𝚋𝚢 𝚍𝚒𝚗𝚐𝚞𝚜𝚌𝚑𝚊𝚗!</h3>
+        <input type="text" id="repoSearch" placeholder="Search GitHub repositories...">
+        <button onclick="searchRepos()">Search</button>&nbsp
+        <br>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        function searchRepos() {
+            const query = document.getElementById('repoSearch').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (query) {
+                fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.items && data.items.length) {
+                            data.items.forEach(repo => {
+                                const repoDiv = document.createElement('div');
+                                repoDiv.className = 'repo';
+                                repoDiv.innerHTML = `
+                                    <a href="#" onclick="fetchRepoFiles('${repo.full_name}', this)">${repo.name} by ${repo.owner.login}</a>
+                                    <p>${parseDescription(repo.description)}</p>
+                                    <div class="files" style="display:none;"></div>
+                                `;
+                                resultsDiv.appendChild(repoDiv);
+                            });
+                        } else {
+                            resultsDiv.innerHTML = '<p>No repositories found.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        resultsDiv.innerHTML = '<p>Error fetching repositories.</p>';
+                        console.error('Error:', error);
+                    });
+            } else {
+                resultsDiv.innerHTML = '<p>Please enter a search query.</p>';
+            }
+        }
+
+        function parseDescription(description) {
+            if (!description) return 'No description available';
+            // Convert URLs in description to clickable links
+            return description.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank">${url}</a>`);
+        }
+
+        function fetchRepoFiles(fullName, element) {
+            const filesDiv = element.parentElement.querySelector('.files');
+            const isVisible = filesDiv.style.display !== 'none';
+
+            if (isVisible) {
+                filesDiv.style.display = 'none';
+                return;
+            }
+
+            if (filesDiv.innerHTML) {
+                filesDiv.style.display = 'block';
+                return;
+            }
+
+            fetch(`https://api.github.com/repos/${fullName}/contents`)
+                .then(response => response.json())
+                .then(files => {
+                    files.forEach(file => {
+                        const fileDiv = document.createElement('div');
+                        fileDiv.className = 'file';
+                        fileDiv.innerHTML = `
+                            <span class="file-name">${file.name}</span>
+                            <div class="file-icons">
+                                <a href="${file.html_url}" target="_blank" class="github"><i class="fab fa-github"></i></a>
+                                <a class="download" onclick="downloadFile('${file.download_url}', '${file.name}')"><i class="fas fa-download"></i></a>
+                            </div>
+                        `;
+                        filesDiv.appendChild(fileDiv);
+                    });
+                    filesDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching files:', error);
+                });
+        }
+
+        function downloadFile(url, filename) {
+            fetch(url)
+                .then(response => response.text())
+                .then(data => {
+                    const blob = new Blob([data], { type: 'text/plain' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                })
+                .catch(error => console.error('Error downloading file:', error));
+        }
+    </script>
+</body>
+</html>
